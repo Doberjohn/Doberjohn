@@ -39,12 +39,12 @@ const PROJECTS = [
     desc: 'Synergy finder for Disney Lorcana. Pick a card and see its Shift targets, companions and archetypes.',
   },
   {
-    slug: 'scorebox',
-    title: 'Inkweave Scorebox',
+    slug: 'doomsday-clock',
+    title: 'Doomsday Clock',
     label: 'TypeScript · React',
     dot: '#3178c6',
-    link: 'scorebox.inkweave.ink',
-    desc: 'Live scoreboard for opening a Lorcana booster box with friends, ending in a shareable recap.',
+    link: 'doomsday-clock-mcu.vercel.app',
+    desc: 'Every MCU title plotted as a constellation by story order and release date, counting down to Doomsday.',
   },
   {
     slug: 'prompt-toolkit',
