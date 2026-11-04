@@ -1,7 +1,7 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./assets/header-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="./assets/header-light.svg">
-  <img alt="John Fanidis. Web developer at Callstack, building Recurssive in Thessaloniki." src="./assets/header-light.svg" width="100%">
+  <img alt="John Fanidis, founder of Recurssive, working with Callstack in Thessaloniki." src="./assets/header-light.svg" width="100%">
 </picture>
 
 ### Now building
