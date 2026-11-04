@@ -16,10 +16,10 @@ jobs:
       - uses: Platane/snk/svg-only@v3
         with:
           github_user_name: ${{ github.repository_owner }}
-          # Colours match the header palette (periwinkle dots, mint snake)
+          # Colours match the header palette (Recurssive purples, ink snake)
           outputs: |
-            dist/snake-light.svg?color_snake=#0c9a80&color_dots=#ebeef2,#cdd3fa,#9ea9f2,#6b78e3,#4f5bd5
-            dist/snake-dark.svg?color_snake=#5fe0c4&color_dots=#161b22,#1f2747,#33408a,#5a6bd6,#8b9dff
+            dist/snake-light.svg?color_snake=#1a1530&color_dots=#ebeef2,#e2dcff,#b8adff,#7856ec,#4813d0
+            dist/snake-dark.svg?color_snake=#f3f1fa&color_dots=#161b22,#241d47,#3b2a9a,#6a4cf0,#a59bff
 
       - name: Publish to the "output" branch
         uses: crazy-max/ghaction-github-pages@v5

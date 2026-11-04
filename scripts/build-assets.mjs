@@ -19,9 +19,9 @@ const OUT = path.join(ROOT, 'assets');
 
 const PROFILE = {
   name: 'John Fanidis',
-  kicker: 'Web developer @ Callstack',
+  kicker: 'Founder @ Recurssive',
   typing: [
-    'shipping react + typescript',
+    'shipping react with callstack',
     'building recurssive.com',
     'cooking lorcana decks',
     'tinkering with llms',
@@ -59,25 +59,32 @@ const PROJECTS = [
     title: 'Recurssive',
     label: 'Web & app studio',
     dot: 'accentA',
+    brand: true, // the studio's card carries the full signature gradient on its top edge
     link: 'recurssive.com',
     desc: 'Studio in Thessaloniki crafting custom websites plus mobile and desktop apps.',
   },
 ];
 
+// Recurssive palette (app/src/app/theme.css): Inception #4813D0, Flow #A59BFF and the
+// signature gradient #966FFF → #2805C3 → #4616E3 → #7856EC. `a` is the main accent,
+// `b` the brighter second one; `spiral` runs from the centre of the motif to its edge.
+const BRAND_GRADIENT = ['#966FFF', '#2805C3', '#4616E3', '#7856EC'];
 const THEMES = {
   dark: {
-    bg0: '#0d1117', bg1: '#121826', border: '#262d38',
-    text: '#f0f3f6', text2: '#b9c1cc', muted: '#8b949e', dim: '#5b6470',
-    a: '#8b9dff', b: '#5fe0c4',
-    glow: '#6c7cff', glowOpacity: 0.22,
-    dots: '#ffffff', dotsOpacity: 0.085,
+    bg0: '#0d1117', bg1: '#130f24', border: '#272338',
+    text: '#f3f1fa', text2: '#bdb8d0', muted: '#8f8aa3', dim: '#5f5a72',
+    a: '#A59BFF', b: '#D4CDFF',
+    glow: '#4616E3', glowOpacity: 0.3,
+    dots: '#ffffff', dotsOpacity: 0.07,
+    spiral: ['#E4DFFF', '#A59BFF', '#5B3BE8'],
   },
   light: {
-    bg0: '#ffffff', bg1: '#f3f5f9', border: '#d1d9e0',
-    text: '#1f2328', text2: '#454d58', muted: '#59636e', dim: '#8c959f',
-    a: '#4f5bd5', b: '#0c9a80',
-    glow: '#7b88ff', glowOpacity: 0.14,
-    dots: '#1f2328', dotsOpacity: 0.11,
+    bg0: '#ffffff', bg1: '#f5f3ff', border: '#dcd7ee',
+    text: '#1a1530', text2: '#463f5e', muted: '#5f5875', dim: '#9089a6',
+    a: '#4813D0', b: '#966FFF',
+    glow: '#7856EC', glowOpacity: 0.13,
+    dots: '#1a1530', dotsOpacity: 0.09,
+    spiral: ['#2805C3', '#4813D0', '#A59BFF'],
   },
 };
 
@@ -99,7 +106,6 @@ const F = {
 
 const r2 = (n) => Math.round(n * 100) / 100;
 const rad = (deg) => (deg * Math.PI) / 180;
-const lerp = (a, b, t) => a + (b - a) * t;
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 // Own serializer: opentype.js's toPathData occasionally emits NaN when rounding.
@@ -199,38 +205,33 @@ function typingLine({ lines, x, y, size, t, id }) {
   return { defs, body };
 }
 
-function recursionMotif({ cx, cy, size, count, step, t, id }) {
+// Infinite zoom into the square spiral. Each square is the previous one turned by `step`
+// and shrunk to fit inside it. Over one cycle the whole stack scales up by 1/s and turns
+// back by `step`, so every square lands exactly where its parent was and the loop has no
+// seam. The squares are drawn white into a mask and a fixed radial gradient shows
+// through, so the colour stays put while the geometry moves. The outermost square fades
+// out before it reaches the card edge (`reach`), which hides the hand-over.
+function recursionMotif({ cx, cy, reach, step, dur, t, id }) {
   const s = 1 / (Math.cos(rad(step)) + Math.sin(rad(step)));
-  let body = '';
-  const squares = [];
-  for (let i = 0; i < count; i++) {
-    const side = size * s ** i;
-    const rx = Math.max(1.5, side * 0.03);
-    const ang = step * i;
-    squares.push({ side, rx, ang });
-    const op = lerp(0.3, 0.95, i / (count - 1));
-    body += `<rect x="${r2(cx - side / 2)}" y="${r2(cy - side / 2)}" width="${r2(side)}" height="${r2(side)}" rx="${r2(rx)}" transform="rotate(${r2(ang)} ${cx} ${cy})" fill="none" stroke="url(#${id}-stroke)" stroke-opacity="${r2(op)}" stroke-width="1.3"/>`;
+  // Smallest outer square whose grown-up parent is fully past the fade.
+  const size = Math.ceil((2 * reach) * s) + 4;
+  let squares = '';
+  for (let i = 0, side = size; side > 4; i++, side = size * s ** i) {
+    squares += `<rect x="${r2(-side / 2)}" y="${r2(-side / 2)}" width="${r2(side)}" height="${r2(side)}" rx="${r2(Math.max(1, side * 0.03))}" transform="rotate(${r2(step * i)})" stroke-width="1.3" vector-effect="non-scaling-stroke"/>`;
   }
-
-  // light pulses travelling along two of the squares
-  const runner = (sq, color, dur, reverse, len) => {
-    const P = 4 * sq.side - 8 * sq.rx + 2 * Math.PI * sq.rx;
-    const geom = `x="${r2(cx - sq.side / 2)}" y="${r2(cy - sq.side / 2)}" width="${r2(sq.side)}" height="${r2(sq.side)}" rx="${r2(sq.rx)}" transform="rotate(${r2(sq.ang)} ${cx} ${cy})"`;
-    const anim = `<animate attributeName="stroke-dashoffset" from="0" to="${r2(reverse ? P : -P)}" dur="${dur}s" repeatCount="indefinite"/>`;
-    const dash = `stroke-dasharray="${r2(len)} ${r2(P - len)}"`;
-    return `<rect ${geom} fill="none" stroke="${color}" stroke-opacity="0.22" stroke-width="7" stroke-linecap="round" ${dash}>${anim}</rect>`
-      + `<rect ${geom} fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" ${dash}>${anim}</rect>`;
-  };
-  body += runner(squares[0], t.b, 9, false, 90);
-  body += runner(squares[6], t.a, 6.5, true, 50);
-
-  // pulse at the centre (the base case)
-  body += `<circle cx="${cx}" cy="${cy}" r="3" fill="${t.b}"/>`
-    + `<circle cx="${cx}" cy="${cy}" r="3" fill="none" stroke="${t.b}" stroke-width="1.2">`
-    + `<animate attributeName="r" values="3;16" dur="3.2s" repeatCount="indefinite"/>`
-    + `<animate attributeName="stroke-opacity" values="0.8;0" dur="3.2s" repeatCount="indefinite"/>`
-    + `</circle>`;
-  return body;
+  const [c0, c1, c2] = t.spiral;
+  const defs = `
+  <radialGradient id="${id}-spiral" cx="${cx}" cy="${cy}" r="${reach}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${c0}"/><stop offset="0.5" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></radialGradient>
+  <radialGradient id="${id}-reach" cx="${cx}" cy="${cy}" r="${reach}" gradientUnits="userSpaceOnUse"><stop offset="0.45" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+  <mask id="${id}-squares" maskUnits="userSpaceOnUse" x="${cx - reach}" y="${cy - reach}" width="${2 * reach}" height="${2 * reach}">
+    <g transform="translate(${cx} ${cy})" fill="none" stroke="#fff"><g>
+      <animateTransform attributeName="transform" type="rotate" from="0" to="${-step}" dur="${dur}s" repeatCount="indefinite"/>
+      <g><animateTransform attributeName="transform" type="scale" from="1" to="${r2((1 / s) * 10000) / 10000}" dur="${dur}s" repeatCount="indefinite"/>${squares}</g>
+    </g></g>
+  </mask>
+  <mask id="${id}-reachmask" maskUnits="userSpaceOnUse" x="${cx - reach}" y="${cy - reach}" width="${2 * reach}" height="${2 * reach}"><rect x="${cx - reach}" y="${cy - reach}" width="${2 * reach}" height="${2 * reach}" fill="url(#${id}-reach)"/></mask>`;
+  const body = `<g mask="url(#${id}-reachmask)"><rect x="${cx - reach}" y="${cy - reach}" width="${2 * reach}" height="${2 * reach}" fill="url(#${id}-spiral)" mask="url(#${id}-squares)"/></g>`;
+  return { defs, body };
 }
 
 function header(themeName) {
@@ -238,27 +239,27 @@ function header(themeName) {
   const W = 1200, H = 360, R = 22;
   const id = `h${themeName[0]}`;
   const x0 = 76;
-  const mx = 962, my = 180, msize = 248;
+  const mx = 962, my = 180;
 
   const typing = typingLine({ lines: PROFILE.typing, x: x0, y: 236, size: 24, t, id });
+  const motif = recursionMotif({ cx: mx, cy: my, reach: 175, step: 7, dur: 2.6, t, id });
 
   const defs = `
   <clipPath id="${id}-card"><rect width="${W}" height="${H}" rx="${R}"/></clipPath>
   <linearGradient id="${id}-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${t.bg0}"/><stop offset="1" stop-color="${t.bg1}"/></linearGradient>
   <radialGradient id="${id}-glow" cx="${mx}" cy="${my}" r="330" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${t.glow}" stop-opacity="${t.glowOpacity}"/><stop offset="1" stop-color="${t.glow}" stop-opacity="0"/></radialGradient>
-  <linearGradient id="${id}-stroke" x1="${mx - msize / 2}" y1="${my - msize / 2}" x2="${mx + msize / 2}" y2="${my + msize / 2}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${t.a}"/><stop offset="1" stop-color="${t.b}"/></linearGradient>
   <linearGradient id="${id}-name" x1="0" y1="${110}" x2="0" y2="${176}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${t.text}"/><stop offset="1" stop-color="${t.text2}"/></linearGradient>
   <pattern id="${id}-dots" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="12" cy="12" r="1.15" fill="${t.dots}" fill-opacity="${t.dotsOpacity}"/></pattern>
   <radialGradient id="${id}-fade" cx="${mx}" cy="${my}" r="560" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff"/><stop offset="0.55" stop-color="#fff" stop-opacity="0.55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
   <mask id="${id}-mask"><rect width="${W}" height="${H}" fill="url(#${id}-fade)"/></mask>
-  ${typing.defs}`;
+  ${typing.defs}${motif.defs}`;
 
   const body = `
   <g clip-path="url(#${id}-card)">
     <rect width="${W}" height="${H}" fill="url(#${id}-bg)"/>
     <rect width="${W}" height="${H}" fill="url(#${id}-dots)" mask="url(#${id}-mask)"/>
     <rect width="${W}" height="${H}" fill="url(#${id}-glow)"/>
-    ${recursionMotif({ cx: mx, cy: my, size: msize, count: 16, step: 7, t, id })}
+    ${motif.body}
   </g>
   <rect x="0.5" y="0.5" width="${W - 1}" height="${H - 1}" rx="${R - 0.5}" fill="none" stroke="${t.border}"/>
 
@@ -302,13 +303,15 @@ function card(p, themeName, column) {
     <clipPath id="${id}-card"><rect width="${W}" height="${H}" rx="${R}"/></clipPath>
     <linearGradient id="${id}-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${t.bg0}"/><stop offset="1" stop-color="${t.bg1}"/></linearGradient>
     <radialGradient id="${id}-glow" cx="${W}" cy="0" r="300" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${t.glow}" stop-opacity="${r2(t.glowOpacity * 0.7)}"/><stop offset="1" stop-color="${t.glow}" stop-opacity="0"/></radialGradient>
-    <linearGradient id="${id}-line" x1="0" y1="0" x2="${W}" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${t.a}" stop-opacity="0"/><stop offset="0.5" stop-color="${t.a}" stop-opacity="0.7"/><stop offset="1" stop-color="${t.b}" stop-opacity="0"/></linearGradient>
+    <linearGradient id="${id}-line" x1="0" y1="0" x2="${W}" y2="0" gradientUnits="userSpaceOnUse">${p.brand
+      ? BRAND_GRADIENT.map((c, i) => `<stop offset="${r2(i / (BRAND_GRADIENT.length - 1))}" stop-color="${c}"/>`).join('')
+      : `<stop offset="0" stop-color="${t.a}" stop-opacity="0"/><stop offset="0.5" stop-color="${t.a}" stop-opacity="0.7"/><stop offset="1" stop-color="${t.b}" stop-opacity="0"/>`}</linearGradient>
   </defs>
   <g transform="translate(${offset} 0)">
   <g clip-path="url(#${id}-card)">
     <rect width="${W}" height="${H}" fill="url(#${id}-bg)"/>
     <rect width="${W}" height="${H}" fill="url(#${id}-glow)"/>
-    <rect x="0" y="0" width="${W}" height="1.5" fill="url(#${id}-line)"/>
+    <rect x="0" y="0" width="${W}" height="${p.brand ? 4 : 1.5}" fill="url(#${id}-line)"/>
   </g>
   <rect x="0.5" y="0.5" width="${W - 1}" height="${H - 1}" rx="${R - 0.5}" fill="none" stroke="${t.border}"/>
   <circle cx="${x0 + 5}" cy="46" r="5" fill="${dot}"/>
