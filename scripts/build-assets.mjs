@@ -43,7 +43,7 @@ const PROJECTS = [
     title: 'Doomsday Clock',
     label: 'TypeScript · React',
     dot: '#3178c6',
-    link: 'doomsday-clock-mcu.vercel.app',
+    link: 'doomsday-clock.online',
     desc: 'Every MCU title plotted as a constellation by story order and release date, counting down to Doomsday.',
   },
   {
